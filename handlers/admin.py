@@ -245,6 +245,30 @@ async def deactivate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"❌ کاربر {target_id} غیرفعال شد.")
 
+async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin: remove a user from the bot (delete from worker_days_off.json)."""
+    if update.effective_user.id not in ADMIN_IDS:
+        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+
+    if not context.args:
+        return await update.message.reply_text("❗️ استفاده: /remove_user <user_id>")
+
+    target_id = context.args[0]
+    db = await read_all()
+    if target_id not in db or target_id == "_config":
+        return await update.message.reply_text("❗️ کاربر پیدا نشد یا قابل حذف نیست.")
+
+    del db[target_id]
+    await write_all(db)
+
+    await update.message.reply_text(f"کاربر {target_id} با موفقیت حذف شد ✅")
+    try:
+        await context.bot.send_message(
+            chat_id=int(target_id),
+            text="⛔️ حساب شما توسط مدیریت حذف شد. دیگر نمی‌توانید از امکانات استفاده کنید."
+        )
+    except Exception:
+        pass
 
 async def list_inactive(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:

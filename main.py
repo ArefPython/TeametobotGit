@@ -11,7 +11,7 @@ from .handlers.common import start, check_status
 from .handlers.admin import (
     unlimit_today, notify_all, give_yellow,
     assign_task, list_users, remove_yellow, set_name,
-    activate_user, deactivate_user, list_inactive
+    activate_user, deactivate_user, list_inactive, remove_user
 
 )
 
@@ -62,6 +62,7 @@ def build_app(token: str):
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_SCORES}$"), my_scores))
     app.add_handler(CommandHandler("remove_yellow", remove_yellow))
     app.add_handler(CommandHandler("setname", set_name))
+    app.add_handler(CommandHandler("remove_user", remove_user))
     app.add_handler(CommandHandler("my_balance", my_balance))
     app.add_handler(CommandHandler("withdraw", withdraw))
     app.add_handler(CommandHandler("list_withdraws", list_withdraws))
