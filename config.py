@@ -23,13 +23,12 @@ BTN_MY_TASKS = "📝 MY TASKS"
 BTN_YELLOWS = "📒 کارت های زرد من"
 BTN_BALANCE = "💰 بانک من"
 BTN_WITHDRAW = "📤 درخواست برداشت"
-
-
+BTN_TRANSFER = "🔄 انتقال امتیاز"
 
 MAIN_MENU = [
     [BTN_CHECKIN, BTN_CHECKOUT],
     [BTN_MY_INS, BTN_MY_OUTS],
     [BTN_MY_LEAVES, BTN_REQUEST_LEAVE],
     [BTN_MY_TASKS, BTN_YELLOWS],
-    [BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW]
+    [BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW, BTN_TRANSFER]
 ]

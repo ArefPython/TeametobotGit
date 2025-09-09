@@ -34,11 +34,12 @@ from .handlers.credits import (
     list_withdraws, reject_withdraw,
     approve_withdraw, pending_withdraws,handle_withdraw_action
 )
+from .handlers.transfer_points import transfer_points_conv_handler
 from .config import (
     BTN_CHECKIN, BTN_CHECKOUT,
     BTN_MY_INS, BTN_MY_OUTS,
     BTN_YELLOWS, BTN_MY_TASKS,
-    BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW
+    BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW, BTN_TRANSFER,
 )
 def build_app(token: str):
     app = ApplicationBuilder().token(token).build()
@@ -72,6 +73,7 @@ def build_app(token: str):
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_BALANCE}$"), my_balance_button))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_WITHDRAW}$"), withdraw_button))
 # catch numbers typed after withdraw button
+    app.add_handler(transfer_points_conv_handler)
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(r"^\d+$"), handle_withdraw_amount))
     app.add_handler(CallbackQueryHandler(handle_withdraw_action, pattern=r"^withdraw_action:"))
     app.add_handler(CommandHandler("activate", activate_user))
