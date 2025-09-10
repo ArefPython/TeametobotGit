@@ -13,12 +13,18 @@ async def is_unlimited_today(db: Dict[str, Any]) -> bool:
     today = now_local().date().isoformat()
     return today in cfg.get("unlimited_dates", [])
 
-async def is_late(db: Dict[str, Any], when: datetime) -> bool:
+async def is_late(db, when: datetime) -> bool:
     if await is_unlimited_today(db):
         return False
-    limit = parse_hhmm(await effective_limit_str(db))
-    return when.time() > limit
-
+    # Determine allowed cutoff time based on the weekday
+    weekday = when.weekday()              # Monday=0, ..., Thursday=3, ...
+    if weekday == 3:  # Thursday
+        # Use 9:30 AM as cutoff on Thursdays
+        limit_time = parse_hhmm("09:30")
+    else:
+        # Use default cutoff (or configured override) on other days
+        limit_time = parse_hhmm(await effective_limit_str(db))
+    return when.time() > limit_time
 async def append_check(db: Dict[str, Any], user: Dict[str, Any], *, kind: str) -> datetime:
     now = now_local()
     ts = now.strftime("%Y-%m-%d %H:%M")
