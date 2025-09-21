@@ -1,38 +1,65 @@
-# TODO: /task, MY TASKS, tasks done
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, CallbackQueryHandler
+
 from ..storage import read_all, write_all, get_user
 
+
+def _msg(update: Update):
+    return update.effective_message
+
+
+def _user(update: Update):
+    return update.effective_user
+
+
+def _query(update: Update):
+    return update.callback_query
+
+
 async def show_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = _user(update)
+    if tg_user is None:
+        return
+
+    user_id = str(tg_user.id)
     db = await read_all()
-    user = await get_user(db, user_id)
+    user = await get_user(db, user_id, username=tg_user.username, first_name=tg_user.first_name)
 
-    tasks = user.get("tasks", [])
+    tasks = user.get("tasks") or []
     if not tasks:
-        return await update.message.reply_text("🎉 شما هیچ مأموریت فعالی ندارید.")
+        return await msg.reply_text("🎉 شما هیچ مأموریت فعالی ندارید.")
 
-    buttons = []
-    for t in tasks:
-        buttons.append([
-            InlineKeyboardButton(f"✅ {t['text']}", callback_data=f"done:{t['id']}")
-        ])
+    buttons = [
+        [InlineKeyboardButton(f"✅ {t['text']}", callback_data=f"done:{t['id']}")]
+        for t in tasks
+    ]
 
-    await update.message.reply_text(
-        "📝 ماموریت‌های شما:",
-        reply_markup=InlineKeyboardMarkup(buttons)
+    await msg.reply_text(
+        "📋 مأموریت‌های فعلی شما:",
+        reply_markup=InlineKeyboardMarkup(buttons),
     )
 
+
 async def task_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
+    query = _query(update)
+    if query is None:
+        return
     await query.answer()
 
     user_id = str(query.from_user.id)
     db = await read_all()
     user = await get_user(db, user_id)
 
-    task_id = query.data.split(":")[1]
-    tasks = user.get("tasks", [])
+    data = query.data or ""
+    parts = data.split(":", 1)
+    if len(parts) != 2:
+        return
+    task_id = parts[1]
+
+    tasks = user.get("tasks") or []
     done_list = user.setdefault("tasks_done", [])
 
     task = next((t for t in tasks if t["id"] == task_id), None)
@@ -42,4 +69,4 @@ async def task_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await write_all(db)
         await query.edit_message_text(f"✅ مأموریت انجام شد: {task['text']}")
     else:
-        await query.edit_message_text("❌ این مأموریت دیگر وجود ندارد.")
+        await query.edit_message_text("❗️ مأموریت یافت نشد یا قبلاً انجام شده است.")

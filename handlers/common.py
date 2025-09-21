@@ -3,26 +3,46 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 from ..storage import read_all, write_all, get_user
 from ..config import MAIN_MENU
 
+
+
+def _msg(update: Update):
+    return update.effective_message
+
+
+def start_callback_data(data: str | None) -> str | None:
+    if not data:
+        return None
+    parts = data.split(":", 1)
+    if len(parts) != 2:
+        return None
+    return parts[1]
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    username = update.effective_user.username
+    message = _msg(update)
+    if message is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None:
+        return
+
+    user_id = str(tg_user.id)
+    username = tg_user.username
+    first_name = getattr(tg_user, "first_name", None)
 
     db = await read_all()
-    user = await get_user(db, user_id, username=username)
+    user = await get_user(db, user_id, username=username, first_name=first_name)
     await write_all(db)
 
     if not user.get("active", False):
-        # Show inline button to check status
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔄 بررسی وضعیت من", callback_data=f"check_status:{user_id}")]
         ])
-        return await update.message.reply_text(
+        return await message.reply_text(
             "👋 سلام! حساب شما ساخته شد ولی هنوز توسط مدیریت فعال نشده است.",
             reply_markup=keyboard
         )
 
-    # If already active
-    await update.message.reply_text(
+    await message.reply_text(
         "بزن بریم آفیسر 🚀",
         reply_markup=ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
     )
@@ -30,9 +50,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def check_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    if query is None:
+        return
     await query.answer()
 
-    user_id = query.data.split(":")[1]
+    user_id = start_callback_data(query.data)
+    if not user_id:
+        return
+
     db = await read_all()
     user = db.get(user_id)
 

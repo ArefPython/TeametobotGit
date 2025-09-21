@@ -40,8 +40,16 @@ async def ensure_config(db: Dict[str, Any]) -> Dict[str, Any]:
     cfg.setdefault("checkin_limit", None)  # None → use DEFAULT_CHECKIN_LIMIT
     return cfg
 
-async def get_user(db: Dict[str, Any], uid: str, *, username: Optional[str] = None) -> Dict[str, Any]:
+async def get_user(
+    db: Dict[str, Any],
+    uid: str,
+    *,
+    username: Optional[str] = None,
+    first_name: Optional[str] = None,
+) -> Dict[str, Any]:
     user = db.setdefault(uid, DEFAULT_USER.copy())
-    if username and not user.get("username"):
+    if username is not None and user.get("username") != username:
         user["username"] = username
+    if first_name is not None:
+        user["first_name"] = first_name
     return user

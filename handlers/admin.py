@@ -8,26 +8,39 @@ from datetime import datetime
 
 
 
+def _msg(update: Update):
+    return update.effective_message
+
+
 async def unlimit_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
     db = await read_all()
     cfg = await ensure_config(db)
     today = date.today().isoformat()
     if today not in cfg["unlimited_dates"]:
         cfg["unlimited_dates"].append(today)
         await write_all(db)
-    await update.message.reply_text("امروز محدودیت ورود برداشته شد ✅")
+    await msg.reply_text("امروز محدودیت ورود برداشته شد ✅")
 
 async def notify_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: broadcast a message to all users."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if not context.args:
-        return await update.message.reply_text("❗️ لطفا متن پیام را بعد از /notify وارد کنید.")
+    args = context.args or []
+    if not args:
+        return await msg.reply_text("❗️ لطفا متن پیام را بعد از /notify وارد کنید.")
 
-    message = " ".join(context.args)
+    message = " ".join(args)
     db = await read_all()
     count = 0
 
@@ -40,17 +53,22 @@ async def notify_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-    await update.message.reply_text(f"پیام برای {count} نفر ارسال شد ✅")
+    await msg.reply_text(f"پیام برای {count} نفر ارسال شد ✅")
 async def set_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: set or update a user's display name."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if len(context.args) < 2:
-        return await update.message.reply_text("❗️ استفاده: /setname <user_id> <display name>")
+    args = context.args or []
+    if len(args) < 2:
+        return await msg.reply_text("❗️ استفاده: /setname <user_id> <display name>")
 
-    target_id = context.args[0]
-    new_name = " ".join(context.args[1:])
+    target_id = args[0]
+    new_name = " ".join(args[1:])
 
     db = await read_all()
     user = await get_user(db, target_id)
@@ -59,7 +77,7 @@ async def set_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user["display_name"] = new_name
     await write_all(db)
 
-    await update.message.reply_text(f"نام کاربر تغییر یافت:\n{old_name} → {new_name}")
+    await msg.reply_text(f"نام کاربر تغییر یافت:\n{old_name} → {new_name}")
 
     # notify user
     try:
@@ -72,26 +90,31 @@ async def set_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def remove_yellow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: remove a yellow card from a user by index."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if len(context.args) < 2:
-        return await update.message.reply_text("❗️ استفاده: /remove_yellow <user_id> <index>")
+    args = context.args or []
+    if len(args) < 2:
+        return await msg.reply_text("❗️ استفاده: /remove_yellow <user_id> <index>")
 
-    target_id = context.args[0]
+    target_id = args[0]
     try:
-        index = int(context.args[1]) - 1
+        index = int(args[1]) - 1
     except ValueError:
-        return await update.message.reply_text("❗️ شماره کارت زرد باید عدد باشد.")
+        return await msg.reply_text("❗️ شماره کارت زرد باید عدد باشد.")
 
     db = await read_all()
     user = await get_user(db, target_id)
 
     cards = user.get("yellow_cards", [])
     if not cards:
-        return await update.message.reply_text("❗️ این کاربر هیچ کارت زردی ندارد.")
+        return await msg.reply_text("❗️ این کاربر هیچ کارت زردی ندارد.")
     if index < 0 or index >= len(cards):
-        return await update.message.reply_text("❗️ شماره کارت زرد نامعتبر است.")
+        return await msg.reply_text("❗️ شماره کارت زرد نامعتبر است.")
 
     removed = cards.pop(index)
     await write_all(db)
@@ -107,20 +130,25 @@ async def remove_yellow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
-    await update.message.reply_text(f"کارت زرد شماره {index+1} برای {display} حذف شد ✅")
+    await msg.reply_text(f"کارت زرد شماره {index+1} برای {display} حذف شد ✅")
 
 
 
 async def give_yellow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: manually assign a yellow card with a reason."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if len(context.args) < 2:
-        return await update.message.reply_text("❗️ استفاده: /yellow <user_id> <reason>")
+    args = context.args or []
+    if len(args) < 2:
+        return await msg.reply_text("❗️ استفاده: /yellow <user_id> <reason>")
 
-    target_id = context.args[0]
-    reason = " ".join(context.args[1:])
+    target_id = args[0]
+    reason = " ".join(args[1:])
 
     db = await read_all()
     user = await get_user(db, target_id)
@@ -150,18 +178,23 @@ async def give_yellow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-    await update.message.reply_text(f"کارت زرد برای {display} ثبت شد ✅")
+    await msg.reply_text(f"کارت زرد برای {display} ثبت شد ✅")
 
 async def assign_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: assign a task to a specific user."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if len(context.args) < 2:
-        return await update.message.reply_text("❗️ استفاده: /task <user_id> <task text>")
+    args = context.args or []
+    if len(args) < 2:
+        return await msg.reply_text("❗️ استفاده: /task <user_id> <task text>")
 
-    target_id = context.args[0]
-    task_text = " ".join(context.args[1:])
+    target_id = args[0]
+    task_text = " ".join(args[1:])
     task_id = str(uuid4())[:8]
 
     db = await read_all()
@@ -182,11 +215,15 @@ async def assign_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
-    await update.message.reply_text(f"ماموریت برای {display} ثبت شد ✅")
+    await msg.reply_text(f"ماموریت برای {display} ثبت شد ✅")
 
 async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
     db = await read_all()
     lines = ["👥 لیست کاربران:"]
@@ -199,26 +236,31 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"{uid} → @{uname} / {dname} ({status})")
 
     if len(lines) == 1:
-        return await update.message.reply_text("❗️ هیچ کاربری ثبت نشده است.")
-    await update.message.reply_text("\n".join(lines))
+        return await msg.reply_text("❗️ هیچ کاربری ثبت نشده است.")
+    await msg.reply_text("\n".join(lines))
 
 
 async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
-    if not context.args:
-        return await update.message.reply_text("❗️ استفاده: /activate <user_id>")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
+    args = context.args or []
+    if not args:
+        return await msg.reply_text("❗️ استفاده: /activate <user_id>")
 
-    target_id = context.args[0]
+    target_id = args[0]
     db = await read_all()
     user = db.get(target_id)
     if not user:
-        return await update.message.reply_text("❗️ کاربر پیدا نشد.")
+        return await msg.reply_text("❗️ کاربر پیدا نشد.")
 
     user["active"] = True
     await write_all(db)
 
-    await update.message.reply_text(f"✅ کاربر {target_id} فعال شد.")
+    await msg.reply_text(f"✅ کاربر {target_id} فعال شد.")
     try:
         await context.bot.send_message(
             chat_id=int(target_id),
@@ -229,39 +271,49 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def deactivate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
-    if not context.args:
-        return await update.message.reply_text("❗️ استفاده: /deactivate <user_id>")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
+    args = context.args or []
+    if not args:
+        return await msg.reply_text("❗️ استفاده: /deactivate <user_id>")
 
-    target_id = context.args[0]
+    target_id = args[0]
     db = await read_all()
     user = db.get(target_id)
     if not user:
-        return await update.message.reply_text("❗️ کاربر پیدا نشد.")
+        return await msg.reply_text("❗️ کاربر پیدا نشد.")
 
     user["active"] = False
     await write_all(db)
 
-    await update.message.reply_text(f"❌ کاربر {target_id} غیرفعال شد.")
+    await msg.reply_text(f"❌ کاربر {target_id} غیرفعال شد.")
 
 async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: remove a user from the bot (delete from worker_days_off.json)."""
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
-    if not context.args:
-        return await update.message.reply_text("❗️ استفاده: /remove_user <user_id>")
+    args = context.args or []
+    if not args:
+        return await msg.reply_text("❗️ استفاده: /remove_user <user_id>")
 
-    target_id = context.args[0]
+    target_id = args[0]
     db = await read_all()
     if target_id not in db or target_id == "_config":
-        return await update.message.reply_text("❗️ کاربر پیدا نشد یا قابل حذف نیست.")
+        return await msg.reply_text("❗️ کاربر پیدا نشد یا قابل حذف نیست.")
 
     del db[target_id]
     await write_all(db)
 
-    await update.message.reply_text(f"کاربر {target_id} با موفقیت حذف شد ✅")
+    await msg.reply_text(f"کاربر {target_id} با موفقیت حذف شد ✅")
     try:
         await context.bot.send_message(
             chat_id=int(target_id),
@@ -271,8 +323,12 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
 async def list_inactive(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return await update.message.reply_text("⛔️ دسترسی ندارید.")
+    msg = _msg(update)
+    if msg is None:
+        return
+    tg_user = update.effective_user
+    if tg_user is None or tg_user.id not in ADMIN_IDS:
+        return await msg.reply_text("⛔️ دسترسی ندارید.")
 
     db = await read_all()
     lines = ["❌ کاربران غیرفعال:"]
@@ -286,5 +342,5 @@ async def list_inactive(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append(f"{uid} → {name}")
 
     if not found:
-        return await update.message.reply_text("✅ هیچ کاربر غیرفعالی وجود ندارد.")
-    await update.message.reply_text("\n".join(lines))
+        return await msg.reply_text("✅ هیچ کاربر غیرفعالی وجود ندارد.")
+    await msg.reply_text("\n".join(lines))

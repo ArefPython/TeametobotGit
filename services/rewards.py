@@ -64,7 +64,7 @@ async def handle_early_bird_logic(db: Dict[str, Any], user_id: str) -> bool:
         return False
 
     today = _today_iso()
-    order = _today_earliest_per_user(db)[:3]
+    order = _today_earliest_per_user(db)[:4]
     top_ids = [uid for uid, _ in order]
 
     if user_id not in top_ids:
