@@ -25,7 +25,7 @@ async def is_late(db, when: datetime) -> bool:
         return False
     weekday = when.weekday()
     if weekday == 3:
-        limit_time = parse_hhmm("09:30")
+        limit_time = parse_hhmm("09:31")
     else:
         limit_time = parse_hhmm(await effective_limit_str(db))
     return when.time() > limit_time

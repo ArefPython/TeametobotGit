@@ -51,7 +51,7 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
         await message.reply_text(f"✅ ورود امروز در ساعت {time_str} ثبت شد.")
 
     if just_awarded:
-        await message.reply_text("🏅 شما بین سه نفر اول امروز بودید؛ 1 امتیاز گرفتید!")
+        await message.reply_text("🏅 شما بین چهار نفر اول امروز بودید؛ 1 امتیاز گرفتید!")
 
     await message.reply_text(ladder_text)
 
