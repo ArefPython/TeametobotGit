@@ -43,7 +43,7 @@ def build_early_birds_ladder(db: Dict[str, Any]) -> str:
     Build the text ladder for today's top-3 earliest check-ins.
     Only counts active users.
     """
-    order = _today_earliest_per_user(db)[:3]
+    order = _today_earliest_per_user(db)[:4]
     if not order:
         return "🐦 Early-birds Ladder (امروز)\n— هنوز کسی وارد نشده —"
 
