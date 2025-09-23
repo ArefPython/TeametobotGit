@@ -40,7 +40,7 @@ def _today_earliest_per_user(db: Dict[str, Any]) -> List[Tuple[str, datetime]]:
 
 def build_early_birds_ladder(db: Dict[str, Any]) -> str:
     """
-    Build the text ladder for today's top-3 earliest check-ins.
+    Build the text ladder for today's top-4 earliest check-ins.
     Only counts active users.
     """
     order = _today_earliest_per_user(db)[:4]

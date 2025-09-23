@@ -5,7 +5,7 @@ LOCAL_TZ = timezone("Asia/Tehran")   # operational TZ
 DATA_FILE = "worker_days_off.json"   # existing JSON store
 
 # Defaults / business rules
-DEFAULT_CHECKIN_LIMIT = "08:30"       # HH:MM (24h)
+DEFAULT_CHECKIN_LIMIT = "08:31"       # HH:MM (24h)
 EARLY_BIRD_WINDOW_MIN = 120           # minutes window for early ladder
 
 # Admins (ADD YOUR ADMIN IDS)
