@@ -12,6 +12,13 @@ def _user(update: Update):
     return update.effective_user
 
 
+
+
+def _format_price(points: int) -> str:
+    value = points * 0.4
+    price_str = f"{value:.2f}".rstrip('0').rstrip('.')
+    return price_str
+
 async def my_scores(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = _msg(update)
     if msg is None:
@@ -25,7 +32,8 @@ async def my_scores(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = db.get(user_id)
 
     my_points = int(user.get("points", 0)) if user else 0
-    lines = [f"امتیاز شما {my_points} امتیاز است", ""]
+    my_price = _format_price(my_points)
+    lines = [f"امتیاز شما {my_points} امتیاز است ({my_price} $)", ""]
 
     scores = []
     for uid, u in db.items():
@@ -39,6 +47,7 @@ async def my_scores(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lines.append("لیگ امتیازات تیمی (بر اساس امتیاز)")
     for rank, (pts, name) in enumerate(scores, start=1):
-        lines.append(f"{rank}. {name} → {pts} امتیاز")
+        price = _format_price(pts)
+        lines.append(f"{rank}. {name} – {pts} امتیاز ({price} $)")
 
     await msg.reply_text("\n".join(lines))
