@@ -8,7 +8,11 @@ from ..services.attendance import (
     first_check_in_for_day,
 )
 from ..services.yellow_cards import maybe_add_yellow
-from ..services.rewards import handle_early_bird_logic, build_early_birds_ladder
+from ..services.rewards import (
+    handle_early_bird_logic,
+    build_early_birds_ladder,
+    accrue_overtime_points,
+)
 
 
 async def handle_checkin(update: Update, context: CallbackContext) -> None:
@@ -91,12 +95,12 @@ async def handle_checkout(update: Update, context: CallbackContext) -> None:
         await message.reply_text(response)
         return
 
-    await write_all(db)
-
     first_in = first_check_in_for_day(user, when.date())
 
     worked_str = ""
-    overtime_str = ""
+    overtime_minutes = 0
+    overtime_points = 0
+    overtime_remainder = 0
     if first_in:
         delta = when - first_in
         hours, remainder = divmod(delta.seconds, 3600)
@@ -106,14 +110,28 @@ async def handle_checkout(update: Update, context: CallbackContext) -> None:
         six_pm = when.replace(hour=18, minute=0, second=0, microsecond=0)
         if when > six_pm:
             overtime_delta = when - six_pm
-            ov_minutes = overtime_delta.seconds // 60
-            if ov_minutes > 0:
-                overtime_str = f" اضافه در تلاش بودند {ov_minutes} "
+            overtime_minutes = overtime_delta.seconds // 60
+            if overtime_minutes > 0:
+                overtime_points, overtime_remainder = accrue_overtime_points(user, overtime_minutes)
 
     time_str = when.strftime("%H:%M")
     display = user.get("display_name") or username
 
-    text = f"📢 {display} در ساعت {time_str} خارج شد{worked_str}{overtime_str}."
+    lines = [f"📢 {display} در ساعت {time_str} خارج شد{worked_str}."]
+    if overtime_minutes > 0:
+        if overtime_points > 0:
+            line = f"🏆 {overtime_minutes} دقیقه اضافه‌کاری امروز ثبت شد و {overtime_points} امتیاز گرفت."
+            if overtime_remainder:
+                line += f" باقی‌مانده تا امتیاز بعدی: {overtime_remainder} دقیقه."
+        else:
+            minutes_to_next = 60 - overtime_remainder if overtime_remainder else 60
+            line = f"⏱️ {overtime_minutes} دقیقه اضافه‌کاری امروز ثبت شد. تا امتیاز بعدی {minutes_to_next} دقیقه باقی مانده است."
+        lines.append(line)
+
+    text = "\n".join(lines)
+
+    await write_all(db)
+
     for uid in db:
         if uid == "_config":
             continue

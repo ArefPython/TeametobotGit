@@ -2,6 +2,16 @@ from typing import Dict, Any, List, Tuple
 from datetime import datetime
 from ..utils.time import now_local, parse_db_dt
 
+OVERTIME_BANK_KEY = "overtime_minutes_bank"
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _today_iso() -> str:
     return now_local().date().isoformat()
 
@@ -51,12 +61,15 @@ def build_early_birds_ladder(db: Dict[str, Any]) -> str:
     for i, (uid, dt) in enumerate(order, start=1):
         u = db.get(uid, {})
         name = _display_name(u, uid)
-        lines.append(f"{i}. {name} – {dt.strftime('%H:%M')}")
+        points = _safe_int(u.get("points", 0))
+        price_value = points * 0.4
+        price_str = f"{price_value:.2f}".rstrip('0').rstrip('.')
+        lines.append(f"{i}. {name} - {dt.strftime('%H:%M')} ({points} pts | {price_str} $)")
     return "\n".join(lines)
 
 async def handle_early_bird_logic(db: Dict[str, Any], user_id: str) -> bool:
     """
-    If user is in today's top-3 and not yet rewarded, add +1 point.
+    If user is in today's top-4 and not yet rewarded, add +1 point.
     Skips inactive users.
     """
     u = db.setdefault(user_id, {})
@@ -74,6 +87,24 @@ async def handle_early_bird_logic(db: Dict[str, Any], user_id: str) -> bool:
     if today in awarded:
         return False
 
-    u["points"] = int(u.get("points", 0)) + 1
+    u["points"] = _safe_int(u.get("points", 0)) + 1
     awarded.append(today)
     return True
+
+
+def accrue_overtime_points(user: Dict[str, Any], minutes: int) -> Tuple[int, int]:
+    """
+    Add overtime minutes to the user's bank and convert full hours to points.
+    Returns (points_added, remaining_minutes).
+    """
+    if minutes <= 0:
+        return 0, _safe_int(user.get(OVERTIME_BANK_KEY, 0))
+
+    bank = _safe_int(user.get(OVERTIME_BANK_KEY, 0)) + minutes
+    points_added, remainder = divmod(bank, 60)
+    user[OVERTIME_BANK_KEY] = remainder
+
+    if points_added:
+        user["points"] = _safe_int(user.get("points", 0)) + points_added
+
+    return points_added, remainder
