@@ -1,3 +1,5 @@
+from typing import Any, MutableMapping, cast
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -39,7 +41,8 @@ async def handle_withdraw_action(update: Update, context: ContextTypes.DEFAULT_T
     wlist = user.get("withdrawals") or []
 
     if index < 0 or index >= len(wlist):
-        return await query.edit_message_text("❗️ شماره درخواست نامعتبر است.")
+        await query.edit_message_text("❗️ شماره درخواست نامعتبر است.")
+        return
 
     w = wlist[index]
 
@@ -123,17 +126,20 @@ async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     args = context.args or []
     if not args:
-        return await msg.reply_text("❗️ دستور صحیح: /withdraw <مبلغ>")
+        await msg.reply_text("❗️ دستور صحیح: /withdraw <مبلغ>")
+        return
 
     try:
         amount = int(args[0])
     except ValueError:
-        return await msg.reply_text("❗️ مبلغ باید عدد باشد.")
+        await msg.reply_text("❗️ مبلغ باید عدد باشد.")
+        return
 
     try:
         w = request_withdrawal(user, amount)
     except ValueError as e:
-        return await msg.reply_text(f"❌ {str(e)}")
+        await msg.reply_text(f"❌ {str(e)}")
+        return
 
     await write_all(db)
 
@@ -148,11 +154,13 @@ async def list_withdraws(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     tg_user = _user(update)
     if tg_user is None or tg_user.id not in ADMIN_IDS:
-        return await msg.reply_text("⛔️ دسترسی ندارید.")
+        await msg.reply_text("⛔️ دسترسی ندارید.")
+        return
 
     args = context.args or []
     if not args:
-        return await msg.reply_text("❗️ استفاده: /list_withdraws <user_id>")
+        await msg.reply_text("❗️ استفاده: /list_withdraws <user_id>")
+        return
 
     target_id = args[0]
     db = await read_all()
@@ -160,7 +168,8 @@ async def list_withdraws(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     wlist = user.get("withdrawals") or []
     if not wlist:
-        return await msg.reply_text("❗️ هیچ درخواستی وجود ندارد.")
+        await msg.reply_text("❗️ هیچ درخواستی وجود ندارد.")
+        return
 
     lines = [
         f"درخواست‌های {user.get('display_name') or target_id}:"
@@ -176,24 +185,28 @@ async def approve_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     tg_user = _user(update)
     if tg_user is None or tg_user.id not in ADMIN_IDS:
-        return await msg.reply_text("⛔️ دسترسی ندارید.")
+        await msg.reply_text("⛔️ دسترسی ندارید.")
+        return
 
     args = context.args or []
     if len(args) < 2:
-        return await msg.reply_text("❗️ استفاده: /approve_withdraw <user_id> <index>")
+        await msg.reply_text("❗️ استفاده: /approve_withdraw <user_id> <index>")
+        return
 
     target_id = args[0]
     try:
         index = int(args[1]) - 1
     except ValueError:
-        return await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        return
 
     db = await read_all()
     user = await get_user(db, target_id)
     wlist = user.get("withdrawals") or []
 
     if index < 0 or index >= len(wlist):
-        return await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        return
 
     wlist[index]["status"] = "approved"
     await write_all(db)
@@ -214,24 +227,28 @@ async def reject_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     tg_user = _user(update)
     if tg_user is None or tg_user.id not in ADMIN_IDS:
-        return await msg.reply_text("⛔️ دسترسی ندارید.")
+        await msg.reply_text("⛔️ دسترسی ندارید.")
+        return
 
     args = context.args or []
     if len(args) < 2:
-        return await msg.reply_text("❗️ استفاده: /reject_withdraw <user_id> <index>")
+        await msg.reply_text("❗️ استفاده: /reject_withdraw <user_id> <index>")
+        return
 
     target_id = args[0]
     try:
         index = int(args[1]) - 1
     except ValueError:
-        return await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        return
 
     db = await read_all()
     user = await get_user(db, target_id)
     wlist = user.get("withdrawals") or []
 
     if index < 0 or index >= len(wlist):
-        return await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        await msg.reply_text("❗️ شماره درخواست نامعتبر است.")
+        return
 
     withdrawal = wlist[index]
     amount = withdrawal.get("amount", 0)
@@ -265,7 +282,8 @@ async def pending_withdraws(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     tg_user = _user(update)
     if tg_user is None or tg_user.id not in ADMIN_IDS:
-        return await msg.reply_text("⛔️ دسترسی ندارید.")
+        await msg.reply_text("⛔️ دسترسی ندارید.")
+        return
 
     db = await read_all()
     lines = ["درخواست‌های برداشت در انتظار تایید:"]
@@ -281,7 +299,8 @@ async def pending_withdraws(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 lines.append(f"{name} ({uid}) → {i}. {w['amount']:,} تومان در {w['datetime']}")
 
     if not found:
-        return await msg.reply_text("✅ هیچ درخواست برداشتی در انتظار تایید نیست.")
+        await msg.reply_text("✅ هیچ درخواست برداشتی در انتظار تایید نیست.")
+        return
 
     await msg.reply_text("\n".join(lines))
 
@@ -300,13 +319,14 @@ async def withdraw_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if tg_user is None:
         return
 
-    user_id = str(tg_user.id)
-    context.user_data["awaiting_withdraw"] = True
+    user_data = cast(MutableMapping[str, Any], context.user_data)
+    user_data["awaiting_withdraw"] = True
     await msg.reply_text("لطفاً مبلغ برداشت را به تومان وارد کنید (مثلاً: 500000):")
 
 
 async def handle_withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get("awaiting_withdraw"):
+    user_data = cast(MutableMapping[str, Any], context.user_data)
+    if not user_data.get("awaiting_withdraw"):
         return
 
     msg = _msg(update)
@@ -323,15 +343,17 @@ async def handle_withdraw_amount(update: Update, context: ContextTypes.DEFAULT_T
     try:
         amount = int((msg.text or "").strip())
     except ValueError:
-        return await msg.reply_text("❗️ لطفاً یک عدد معتبر وارد کنید.")
+        await msg.reply_text("❗️ لطفاً یک عدد معتبر وارد کنید.")
+        return
 
     try:
         w = request_withdrawal(user, amount)
     except ValueError as e:
-        return await msg.reply_text(f"❌ {str(e)}")
+        await msg.reply_text(f"❌ {str(e)}")
+        return
 
     await write_all(db)
-    context.user_data["awaiting_withdraw"] = False
+    user_data["awaiting_withdraw"] = False
 
     await msg.reply_text(
         f"درخواست برداشت {w['amount']:,} تومان ثبت شد (وضعیت: {w['status']})."
