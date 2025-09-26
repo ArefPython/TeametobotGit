@@ -10,6 +10,7 @@ from ..services.attendance import (
 from ..services.yellow_cards import maybe_add_yellow
 from ..services.rewards import (
     handle_early_bird_logic,
+    handle_team_checkin_bonus,
     build_early_birds_ladder,
     accrue_overtime_points,
 )
@@ -40,6 +41,7 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
     got_yellow = await maybe_add_yellow(db, user, when)
 
     just_awarded = await handle_early_bird_logic(db, user_id)
+    team_awarded_ids = await handle_team_checkin_bonus(db)
     ladder_text = build_early_birds_ladder(db)
 
     await write_all(db)
@@ -56,6 +58,18 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
 
     if just_awarded:
         await message.reply_text("🏅 شما بین چهار نفر اول امروز بودید؛ 1 امتیاز گرفتید!")
+
+    if team_awarded_ids:
+        team_msg = "🎉 همه اعضای تیم قبل از مهلت امروز ورود کردند؛ 1 امتیاز به همه اضافه شد!"
+        if user_id in team_awarded_ids:
+            await message.reply_text(team_msg)
+        for uid in team_awarded_ids:
+            if uid == user_id:
+                continue
+            try:
+                await context.bot.send_message(chat_id=int(uid), text=team_msg)
+            except Exception:
+                pass
 
     await message.reply_text(ladder_text)
 

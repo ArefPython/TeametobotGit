@@ -1,6 +1,8 @@
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
+
 from ..utils.time import now_local, parse_db_dt
+from .attendance import is_late, is_unlimited_today
 
 OVERTIME_BANK_KEY = "overtime_minutes_bank"
 
@@ -90,6 +92,46 @@ async def handle_early_bird_logic(db: Dict[str, Any], user_id: str) -> bool:
     u["points"] = _safe_int(u.get("points", 0)) + 1
     awarded.append(today)
     return True
+
+
+async def handle_team_checkin_bonus(db: Dict[str, Any]) -> List[str]:
+    """
+    If every active user checked in today before the limit, grant +1 point once per user.
+    Returns the user IDs that received the bonus during this call.
+    """
+    today = _today_iso()
+
+    # Skip when there is no active user or the day has no limit.
+    active_ids: List[str] = []
+    for uid, u in db.items():
+        if uid == "_config" or not isinstance(u, dict):
+            continue
+        if u.get("active", False):
+            active_ids.append(uid)
+
+    if not active_ids or await is_unlimited_today(db):
+        return []
+
+    earliest_today = _today_earliest_per_user(db)
+    if len(earliest_today) < len(active_ids):
+        return []
+
+    # Abort if any earliest check-in is marked late.
+    for _, dt in earliest_today:
+        if await is_late(db, dt):
+            return []
+
+    awarded_ids: List[str] = []
+    for uid in active_ids:
+        user = db.get(uid, {})
+        awarded_dates = user.setdefault("team_awarded_dates", [])
+        if today in awarded_dates:
+            continue
+        user["points"] = _safe_int(user.get("points", 0)) + 1
+        awarded_dates.append(today)
+        awarded_ids.append(uid)
+
+    return awarded_ids
 
 
 def accrue_overtime_points(user: Dict[str, Any], minutes: int) -> Tuple[int, int]:
