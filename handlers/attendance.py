@@ -38,6 +38,10 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
         await message.reply_text(response)
         return
 
+    if when is None:
+        await message.reply_text("❗️در ثبت زمان ورود خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+        return
+
     got_yellow = await maybe_add_yellow(db, user, when)
 
     just_awarded = await handle_early_bird_logic(db, user_id)
@@ -107,6 +111,10 @@ async def handle_checkout(update: Update, context: CallbackContext) -> None:
     ok, response, when = await record_check_out(db, user)
     if not ok:
         await message.reply_text(response)
+        return
+
+    if when is None:
+        await message.reply_text("❗️در ثبت زمان خروج خطایی رخ داد. لطفاً دوباره تلاش کنید.")
         return
 
     first_in = first_check_in_for_day(user, when.date())
