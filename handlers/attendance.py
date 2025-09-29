@@ -10,6 +10,7 @@ from ..services.attendance import (
 from ..services.yellow_cards import maybe_add_yellow, YELLOW_CARD_PENALTY
 from ..services.rewards import (
     handle_early_bird_logic,
+    handle_team_checkin_bonus,
     build_early_birds_ladder,
     accrue_overtime_points,
 )
@@ -37,6 +38,10 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
         await message.reply_text(response)
         return
 
+    if when is None:
+        await message.reply_text("❗️در ثبت زمان ورود خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+        return
+
     got_yellow = await maybe_add_yellow(db, user, when)
     points_after_penalty = None
     if got_yellow:
@@ -48,6 +53,7 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
     balance_display = points_after_penalty if points_after_penalty is not None else user.get("points", 0)
 
     just_awarded = await handle_early_bird_logic(db, user_id)
+    team_awarded_ids = await handle_team_checkin_bonus(db)
     ladder_text = build_early_birds_ladder(db)
 
     await write_all(db)
@@ -68,6 +74,18 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
 
     if just_awarded:
         await message.reply_text("🏅 شما بین چهار نفر اول امروز بودید؛ 1 امتیاز گرفتید!")
+
+    if team_awarded_ids:
+        team_msg = "🎉 همه اعضای تیم قبل از مهلت امروز ورود کردند؛ 1 امتیاز به همه اضافه شد!"
+        if user_id in team_awarded_ids:
+            await message.reply_text(team_msg)
+        for uid in team_awarded_ids:
+            if uid == user_id:
+                continue
+            try:
+                await context.bot.send_message(chat_id=int(uid), text=team_msg)
+            except Exception:
+                pass
 
     await message.reply_text(ladder_text)
 
@@ -111,6 +129,10 @@ async def handle_checkout(update: Update, context: CallbackContext) -> None:
     ok, response, when = await record_check_out(db, user)
     if not ok:
         await message.reply_text(response)
+        return
+
+    if when is None:
+        await message.reply_text("❗️در ثبت زمان خروج خطایی رخ داد. لطفاً دوباره تلاش کنید.")
         return
 
     first_in = first_check_in_for_day(user, when.date())
