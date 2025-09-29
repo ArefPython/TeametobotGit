@@ -7,7 +7,7 @@ from ..services.attendance import (
     record_check_out,
     first_check_in_for_day,
 )
-from ..services.yellow_cards import maybe_add_yellow
+from ..services.yellow_cards import maybe_add_yellow, YELLOW_CARD_PENALTY
 from ..services.rewards import (
     handle_early_bird_logic,
     build_early_birds_ladder,
@@ -38,6 +38,14 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
         return
 
     got_yellow = await maybe_add_yellow(db, user, when)
+    points_after_penalty = None
+    if got_yellow:
+        try:
+            points_after_penalty = int(user.get("points", 0) or 0)
+        except (TypeError, ValueError):
+            points_after_penalty = user.get("points", 0)
+
+    balance_display = points_after_penalty if points_after_penalty is not None else user.get("points", 0)
 
     just_awarded = await handle_early_bird_logic(db, user_id)
     ladder_text = build_early_birds_ladder(db)
@@ -48,9 +56,13 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
     display = user.get("display_name") or username
 
     if got_yellow:
-        await message.reply_text(
+        base_message = (
             f"⏰ دیر کردی! کارت زرد گرفتی.\nولی ورودت در ساعت {time_str} ثبت شد ✅"
         )
+        penalty_message = (
+            f"{base_message}\n- Late penalty: -{YELLOW_CARD_PENALTY} points. Balance: {balance_display} pts."
+        )
+        await message.reply_text(penalty_message)
     else:
         await message.reply_text(f"✅ ورود امروز در ساعت {time_str} ثبت شد.")
 
@@ -60,7 +72,13 @@ async def handle_checkin(update: Update, context: CallbackContext) -> None:
     await message.reply_text(ladder_text)
 
     if got_yellow:
-        text = f"📢 {display} در ساعت {time_str} وارد شد ❌ (کارت زرد گرفت)"
+        penalty_line = (
+            f"\n- Late penalty: -{YELLOW_CARD_PENALTY} points. Balance: {balance_display} pts."
+        )
+        text = (
+            f"📢 {display} در ساعت {time_str} وارد شد ❌ (کارت زرد گرفت)"
+            + penalty_line
+        )
     else:
         text = f"📢 {display} در ساعت {time_str} وارد شد ✅"
 
