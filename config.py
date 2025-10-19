@@ -32,3 +32,14 @@ MAIN_MENU = [
     [BTN_MY_TASKS, BTN_YELLOWS],
     [BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW, BTN_TRANSFER]
 ]
+
+ADMIN_COMMAND_BUTTONS = [
+    ["/unlimit", "/notify", "/yellow"],
+    ["/remove_yellow", "/setname", "/task"],
+    ["/list_users", "/list_inactive"],
+    ["/activate", "/deactivate", "/remove_user"],
+    ["/list_withdraws", "/pending_withdraws"],
+    ["/approve_withdraw", "/reject_withdraw"],
+]
+
+ADMIN_MENU = [row[:] for row in MAIN_MENU] + ADMIN_COMMAND_BUTTONS

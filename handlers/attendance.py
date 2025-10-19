@@ -147,9 +147,11 @@ async def handle_checkout(update: Update, context: CallbackContext) -> None:
         minutes, _ = divmod(remainder, 60)
         worked_str = f" و امروز جمعاً {hours} ساعت و {minutes} دقیقه کار کرد"
 
-        six_pm = when.replace(hour=18, minute=0, second=0, microsecond=0)
-        if when > six_pm:
-            overtime_delta = when - six_pm
+        overtime_start = when.replace(hour=18, minute=0, second=0, microsecond=0)
+        if when.weekday() == 3:  # Thursday
+            overtime_start = overtime_start.replace(hour=14, minute=30)
+        if when > overtime_start:
+            overtime_delta = when - overtime_start
             overtime_minutes = overtime_delta.seconds // 60
             if overtime_minutes > 0:
                 overtime_points, overtime_remainder = accrue_overtime_points(user, overtime_minutes)

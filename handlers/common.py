@@ -1,12 +1,25 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from ..storage import read_all, write_all, get_user
-from ..config import MAIN_MENU
+from ..config import MAIN_MENU, ADMIN_MENU, ADMIN_IDS
 
 
 
 def _msg(update: Update):
     return update.effective_message
+
+
+def _is_admin(user_id: int | str | None) -> bool:
+    try:
+        return int(user_id) in ADMIN_IDS
+    except (TypeError, ValueError):
+        return False
+
+
+def _main_keyboard(user_id: int | str | None) -> ReplyKeyboardMarkup:
+    layout = ADMIN_MENU if _is_admin(user_id) else MAIN_MENU
+    rows = [row[:] for row in layout]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True)
 
 
 def start_callback_data(data: str | None) -> str | None:
@@ -44,7 +57,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await message.reply_text(
         "بزن بریم آفیسر 🚀",
-        reply_markup=ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
+        reply_markup=_main_keyboard(tg_user.id)
     )
 
 
@@ -72,7 +85,7 @@ async def check_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=int(user_id),
                 text="🎉 حالا می‌توانید از امکانات استفاده کنید.",
-                reply_markup=ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
+                reply_markup=_main_keyboard(user_id)
             )
         except Exception:
             pass
