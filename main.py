@@ -39,11 +39,14 @@ from .handlers.credits import (
     CREDITS_CONVERSATIONS,
 )
 from .handlers.transfer_points import transfer_points_conv_handler
+from .handlers.reports import send_monthly_activity_image
+from .avg_checkins import avgcheckins as avgcheckins_command
 from .config import (
     BTN_CHECKIN, BTN_CHECKOUT,
     BTN_MY_INS, BTN_MY_OUTS,
     BTN_YELLOWS, BTN_MY_TASKS,
     BTN_SCORES, BTN_BALANCE, BTN_WITHDRAW, BTN_TRANSFER,
+    BTN_MONTHLY_ACTIVITY,
 )
 def build_app(token: str):
     app = ApplicationBuilder().token(token).build()
@@ -63,6 +66,7 @@ def build_app(token: str):
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_MY_OUTS}$"), my_checkouts))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_YELLOWS}$"), my_yellow_cards))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_MY_TASKS}$"), show_tasks))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_MONTHLY_ACTIVITY}$"), send_monthly_activity_image))
     app.add_handler(CallbackQueryHandler(task_done, pattern=r"^done:"))
     app.add_handler(CommandHandler("list_users", list_users))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{BTN_SCORES}$"), my_scores))
@@ -77,6 +81,7 @@ def build_app(token: str):
     app.add_handler(CallbackQueryHandler(handle_withdraw_action, pattern=r"^withdraw_action:"))
     app.add_handler(CommandHandler("list_inactive", list_inactive))
     app.add_handler(CallbackQueryHandler(check_status, pattern=r"^check_status:"))
+    app.add_handler(CommandHandler("avgcheckins", avgcheckins_command))
 
     return app
 
